@@ -211,3 +211,95 @@ void intel_altmode_task_start(void)
 {
 	k_thread_start(intel_altmode_tid);
 }
+
+#ifdef CONFIG_CONSOLE_CMD_USBPD_INTEL_ALTMODE
+static int console_command_intel_altmode(const struct shell *shell, size_t argc,
+					 char **argv)
+{
+	int port, rv = EC_ERROR_UNKNOWN, i;
+	char rw, *e;
+	uint16_t val1;
+	uint32_t val2 = 0;
+	union data_status_reg status;
+	union data_control_reg control;
+
+	if (argc < 3 || argc > 5) {
+		rv = EC_ERROR_PARAM_COUNT;
+		goto error;
+	}
+
+	/* Get PD port number */
+	port = strtol(argv[1], &e, 0);
+	if (*e || port > CONFIG_USB_PD_PORT_MAX_COUNT) {
+		rv = EC_ERROR_PARAM1;
+		goto error;
+	}
+
+	/* Validate r/w selection */
+	rw = argv[2][0];
+	if (rw != 'w' && rw != 'r') {
+		rv = EC_ERROR_PARAM2;
+		goto error;
+	}
+
+	if (rw == 'r') {
+		if (argc > 3) {
+			rv = EC_ERROR_PARAM_COUNT;
+			goto error;
+		}
+
+		rv = pd_altmode_read(pd_config_array[port], &status);
+		if (rv)
+			goto error;
+
+		shell_fprintf(shell, SHELL_INFO, "RD_VAL: ");
+		for (i = 0; i < INTEL_ALTMODE_DATA_STATUS_REG_LEN; i++)
+			shell_fprintf(shell, SHELL_INFO, "[%d]0x%x, ", i,
+				      status.raw_value[i]);
+		shell_fprintf(shell, SHELL_INFO, "\n");
+	} else {
+		if (argc < 4) {
+			rv = EC_ERROR_PARAM_COUNT;
+			goto error;
+		}
+
+		/* Control register data */
+		val1 = strtoull(argv[3], &e, 0);
+		if (*e) {
+			rv = EC_ERROR_PARAM3;
+			goto error;
+		}
+
+		/* Control register retimer data */
+		if (argc > 4) {
+			val2 = strtoull(argv[4], &e, 0);
+			if (*e) {
+				rv = EC_ERROR_PARAM4;
+				goto error;
+			}
+		}
+
+		memcpy(&control.raw_value[0], &val1, 2);
+		memcpy(&control.raw_value[2], &val2, 4);
+
+		rv = pd_altmode_write(pd_config_array[port], &control);
+		if (rv)
+			goto error;
+
+		shell_fprintf(shell, SHELL_INFO, "WR_VAL: ");
+		for (i = 0; i < INTEL_ALTMODE_DATA_CONTROL_REG_LEN; i++)
+			shell_fprintf(shell, SHELL_INFO, "[%d]0x%x, ", i,
+				      control.raw_value[i]);
+		shell_fprintf(shell, SHELL_INFO, "\n");
+	}
+
+error:
+	if (rv)
+		shell_fprintf(shell, SHELL_INFO, "altmode rv=%d\n", rv);
+
+	return rv;
+}
+
+SHELL_CMD_REGISTER(altmode, NULL, "Read or write to Altmode PD reg",
+		   console_command_intel_altmode);
+#endif /* CONFIG_CONSOLE_CMD_USBPD_INTEL_ALTMODE */
