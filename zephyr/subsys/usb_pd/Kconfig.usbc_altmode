@@ -9,7 +9,6 @@ menuconfig USB_PD_ALTMODE_INTEL
 	default y if DT_HAS_INTEL_PD_ALTMODE_ENABLED
 	select EVENTS
 	select PLATFORM_EC_USBC_SS_MUX
-	select PLATFORM_EC_USB_MUX_VIRTUAL
 	select PLATFORM_EC_USB_PD_HOST_CMD
 	help
 	  Enable this to support configuring the USB-C alternate modes on
