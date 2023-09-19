@@ -34,6 +34,7 @@ rsource "Kconfig.pd"
 rsource "Kconfig.ppc"
 rsource "Kconfig.usb_mux"
 rsource "Kconfig.usbc_ss_mux"
+rsource "Kconfig.usbc_altmode"
 rsource "Kconfig.tcpm"
 rsource "Kconfig.usb_charger"
 
